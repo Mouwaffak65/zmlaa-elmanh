@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#6C63FF">
+  <title>زملاء المنح</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+
+  <!-- ONBOARDING SCREEN -->
+  <div class="onboarding-overlay" id="onboarding">
+    <div class="onboarding-card">
+      <div class="onboarding-logo">🎓</div>
+      <div class="onboarding-sub">زملاء المنح</div>
+      <div class="step-indicator">
+        <div class="step-dot active"></div>
+        <div class="step-dot"></div>
+        <div class="step-dot"></div>
+      </div>
+
+      <!-- Step 1: Name -->
+      <div class="onboarding-step active" id="step1">
+        <h2>ما اسمك؟</h2>
+        <p>سنستخدمه لتعريفك في المجتمع</p>
+        <input type="text" class="onboarding-input" id="onbName" placeholder="مثال: أحمد محمد" autocomplete="name" autofocus>
+        <button class="onboarding-btn" id="nextStep1">التالي</button>
+      </div>
+
+      <!-- Step 2: Country -->
+      <div class="onboarding-step" id="step2">
+        <h2>من أين أنت؟</h2>
+        <p>اخبرنا عن بلدك لنتعرف عليك أكثر</p>
+        <input type="text" class="onboarding-input" id="onbCountry" placeholder="مثال: مصر - السعودية - الجزائر..." autocomplete="country-name">
+        <button class="onboarding-btn" id="nextStep2">التالي</button>
+      </div>
+
+      <!-- Step 3: Level -->
+      <div class="onboarding-step" id="step3">
+        <h2>مستوى دراستك؟</h2>
+        <p>ليساعدك في إيجاد زملاء بنفس المستوى</p>
+        <div class="level-options">
+          <div class="level-option" data-value="ثانوي">ثانوي</div>
+          <div class="level-option" data-value="بكالوريوس">بكالوريوس</div>
+          <div class="level-option" data-value="ماجستير">ماجستير</div>
+          <div class="level-option" data-value="دكتوراه">دكتوراه</div>
+          <div class="level-option" data-value="دبلوم">دبلوم</div>
+          <div class="level-option" data-value="خريج">خريج</div>
+        </div>
+        <button class="onboarding-btn" id="finishBtn">انطلاق! 🚀</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MAIN APP -->
+  <div class="app-container" id="app">
+    <!-- Header -->
+    <header class="app-header">
+      <div class="app-title">زملاء المنح</div>
+      <div class="user-badge" id="userBadge"></div>
+    </header>
+
+    <!-- Feed Page -->
+    <div class="page-content active" id="page-feed">
+      <!-- Post Form -->
+      <div class="post-form">
+        <textarea id="postContent" placeholder="شارك تجربتك مع المنح الدراسية... ما هي المنحة التي تبحث عنها؟"></textarea>
+        <div class="post-form-footer">
+          <select class="category-select" id="postCategory">
+            <option value="عام">عام</option>
+            <option value="منحة">منحة</option>
+            <option value="سؤال">سؤال</option>
+            <option value="نصيحة">نصيحة</option>
+            <option value="تجربة">تجربة</option>
+            <option value="فرصة">فرصة</option>
+          </select>
+          <button class="post-btn" id="postBtn">نشر</button>
+        </div>
+      </div>
+
+      <!-- Categories -->
+      <div class="categories">
+        <button class="cat-btn active" data-cat="الكل">الكل</button>
+        <button class="cat-btn" data-cat="منحة">منحة</button>
+        <button class="cat-btn" data-cat="سؤال">سؤال</button>
+        <button class="cat-btn" data-cat="نصيحة">نصيحة</button>
+        <button class="cat-btn" data-cat="تجربة">تجربة</button>
+        <button class="cat-btn" data-cat="فرصة">فرصة</button>
+        <button class="cat-btn" data-cat="عام">عام</button>
+      </div>
+
+      <!-- Posts -->
+      <div id="postsContainer"></div>
+    </div>
+
+    <!-- Members Page -->
+    <div class="page-content" id="page-members">
+      <h2 class="page-title">👥 أعضاء المجتمع</h2>
+      <div class="members-grid" id="membersContainer"></div>
+    </div>
+  </div>
+
+  <!-- Bottom Navigation -->
+  <nav class="bottom-nav" id="bottomNav">
+    <button class="nav-btn active" data-page="feed">
+      <svg viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+      <span>المنشورات</span>
+    </button>
+    <button class="nav-btn" data-page="members">
+      <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      <span>الأعضاء</span>
+    </button>
+  </nav>
+
+  <div style="text-align:center;padding:16px 0;font-size:0.8rem;color:#B2BEC3">
+    <a href="/privacy.html" style="color:#B2BEC3;text-decoration:none;margin:0 8px">سياسة الخصوصية</a>
+    <span>·</span>
+    <a href="/terms.html" style="color:#B2BEC3;text-decoration:none;margin:0 8px">شروط الاستخدام</a>
+    <p style="margin-top:6px;color:#D0D0D0">جميع الحقوق محفوظة &copy; 2026 زملاء المنح</p>
+  </div>
+
+  <script src="/js/app.js"></script>
+</body>
+</html>
