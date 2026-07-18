@@ -52,6 +52,17 @@ db.serialize(() => {
     FOREIGN KEY (user_id) REFERENCES users(id),
     UNIQUE(post_id, user_id)
   )`);
+
+  db.run(`CREATE TABLE IF NOT EXISTS notifications (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    type TEXT NOT NULL,
+    message TEXT NOT NULL,
+    post_id TEXT,
+    from_user TEXT,
+    read INTEGER DEFAULT 0,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  )`);
 });
 
 function getUserFromCookies(req) {
@@ -61,6 +72,30 @@ function getUserFromCookies(req) {
     db.get('SELECT * FROM users WHERE id = ?', [userId], (err, row) => {
       resolve(row || null);
     });
+  });
+}
+
+// SSE (Server-Sent Events) for real-time notifications
+const sseClients = {};
+
+function sendSSE(userId, data) {
+  if (sseClients[userId]) {
+    sseClients[userId].forEach(res => {
+      res.write(`data: ${JSON.stringify(data)}\n\n`);
+    });
+  }
+}
+
+function addNotification(userId, type, message, postId, fromUser) {
+  return new Promise((resolve) => {
+    const id = uuidv4();
+    db.run('INSERT INTO notifications (id, user_id, type, message, post_id, from_user) VALUES (?, ?, ?, ?, ?, ?)',
+      [id, userId, type, message, postId, fromUser], (err) => {
+        if (!err) {
+          sendSSE(userId, { id, type, message, post_id: postId, from_user: fromUser, read: 0, created_at: new Date().toISOString() });
+        }
+        resolve();
+      });
   });
 }
 
@@ -124,9 +159,18 @@ app.post('/api/posts', async (req, res) => {
   db.run('INSERT INTO posts (id, user_id, content, category) VALUES (?, ?, ?, ?)',
     [id, user.id, content, category || 'عام'], (err) => {
       if (err) return res.status(500).json({ error: err.message });
-      res.json({ success: true, post: { id, user_id: user.id, content, category: category || 'عام',
+      const post = { id, user_id: user.id, content, category: category || 'عام',
         user_name: user.name, user_country: user.country, user_color: user.avatar_color,
-        comments_count: 0, likes_count: 0, liked: false, created_at: new Date().toISOString() } });
+        comments_count: 0, likes_count: 0, liked: false, created_at: new Date().toISOString() };
+      // Notify other online users
+      Object.keys(sseClients).forEach(uid => {
+        if (uid !== user.id) {
+          addNotification(uid, 'new_post',
+            `نشر ${user.name} منشوراً جديداً: "${content.substring(0, 50)}..."`,
+            id, user.name);
+        }
+      });
+      res.json({ success: true, post });
     });
 });
 
@@ -181,10 +225,71 @@ app.post('/api/posts/:id/comments', async (req, res) => {
 });
 
 app.get('/api/users/online', (req, res) => {
-  // Return a few recently active users
   db.all('SELECT name, country, level, avatar_color FROM users ORDER BY created_at DESC LIMIT 20', [], (err, rows) => {
     if (err) return res.json([]);
     res.json(rows);
+  });
+});
+
+// Delete a post (owner only)
+app.delete('/api/posts/:id', async (req, res) => {
+  const user = await getUserFromCookies(req);
+  if (!user) return res.status(401).json({ error: 'الرجاء تسجيل الدخول' });
+  db.get('SELECT * FROM posts WHERE id = ?', [req.params.id], (err, post) => {
+    if (!post) return res.status(404).json({ error: 'المنشور غير موجود' });
+    if (post.user_id !== user.id) return res.status(403).json({ error: 'لا يمكنك حذف منشور غيرك' });
+    db.run('DELETE FROM comments WHERE post_id = ?', [req.params.id]);
+    db.run('DELETE FROM likes WHERE post_id = ?', [req.params.id]);
+    db.run('DELETE FROM posts WHERE id = ?', [req.params.id], (err2) => {
+      if (err2) return res.status(500).json({ error: err2.message });
+      res.json({ success: true });
+    });
+  });
+});
+
+// SSE endpoint for real-time notifications
+app.get('/api/notifications/stream', async (req, res) => {
+  const user = await getUserFromCookies(req);
+  if (!user) return res.status(401).end();
+  res.writeHead(200, {
+    'Content-Type': 'text/event-stream',
+    'Cache-Control': 'no-cache',
+    'Connection': 'keep-alive',
+    'Access-Control-Allow-Origin': '*'
+  });
+  res.write('data: {"connected":true}\n\n');
+  if (!sseClients[user.id]) sseClients[user.id] = [];
+  sseClients[user.id].push(res);
+  req.on('close', () => {
+    sseClients[user.id] = sseClients[user.id].filter(r => r !== res);
+    if (sseClients[user.id].length === 0) delete sseClients[user.id];
+  });
+});
+
+// Get unread notifications count
+app.get('/api/notifications/unread', async (req, res) => {
+  const user = await getUserFromCookies(req);
+  if (!user) return res.json({ count: 0 });
+  db.get('SELECT COUNT(*) as count FROM notifications WHERE user_id = ? AND read = 0', [user.id], (err, row) => {
+    res.json({ count: row ? row.count : 0 });
+  });
+});
+
+// Get all notifications
+app.get('/api/notifications', async (req, res) => {
+  const user = await getUserFromCookies(req);
+  if (!user) return res.json([]);
+  db.all('SELECT * FROM notifications WHERE user_id = ? ORDER BY created_at DESC LIMIT 50', [user.id], (err, rows) => {
+    res.json(rows || []);
+  });
+});
+
+// Mark notifications as read
+app.post('/api/notifications/read', async (req, res) => {
+  const user = await getUserFromCookies(req);
+  if (!user) return res.status(401).json({ error: 'الرجاء تسجيل الدخول' });
+  db.run('UPDATE notifications SET read = 1 WHERE user_id = ?', [user.id], (err) => {
+    res.json({ success: true });
   });
 });
 
